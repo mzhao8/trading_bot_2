@@ -47,13 +47,20 @@ closes = []
 }
 """
 
-def order(symbol, quantity, side, order_type=ORDER_TYPE_MARKET):
-    order = client.create_order(
-        symbol=symbol,
-        side=side,
-        type=order_type,
-        quantity=quantity
-    )
+def order(side, symbol, quantity, order_type=ORDER_TYPE_MARKET) -> bool:
+    try:
+        print("sending")
+        order = client.create_order(
+            symbol=symbol,
+            side=side,
+            type=order_type,
+            quantity=quantity
+        )
+        print(order)
+    except Exception as e:
+        print(f"an exception occured - {e}")
+        return False
+    return True
 
 def on_open(ws):
     print("opened connection")
@@ -64,7 +71,7 @@ def on_close(ws):
 
 
 def on_message(ws, message):
-    global closes
+    global closes, in_position
 
     print("received message")
     json_message = json.loads(message)
@@ -93,6 +100,9 @@ def on_message(ws, message):
                 if in_position:
                     print("Sell!")
                     # put binance sell order logic here
+                    order_succeeded = order(SIDE_SELL, TRADE_SYMBOL, TRADE_QUANTITY)
+                    if order_succeeded:
+                        in_position = False
                 else:
                     print("Overbought, but you don't own it. Nothing to do.")
 
@@ -102,7 +112,9 @@ def on_message(ws, message):
                 else:
                     print("Buy!")
                     # put binance buy order logic here
-
+                    order_succeeded = order(SIDE_BUY, TRADE_SYMBOL, TRADE_QUANTITY)
+                    if order_succeeded:
+                        in_position = True
 
 ws = websocket.WebSocketApp(
     SOCKET, on_open=on_open, on_close=on_close, on_message=on_message
